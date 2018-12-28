@@ -12,11 +12,30 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+    <!-- Flags -->
+    <skip.jacoco.check>true</skip.jacoco.check>
+    <skip.checkstyle.check>false</skip.checkstyle.check>
+    <skip.spotbugs.check>false</skip.spotbugs.check>
+
+    <!-- Rules -->
+    <rule.element.coverage>CLASS</rule.element.coverage>
+    <rule.branch.coverage>0.50</rule.branch.coverage>
+    <rule.line.coverage>0.50</rule.line.coverage>
+    <rule.line.length>120</rule.line.length>
+
+    <!-- Plugin Versions -->
+    <plugin.version.jacoco>0.7.6.201602180812</plugin.version.jacoco>
+    <plugin.version.checkstyle>3.0.0</plugin.version.checkstyle>
+    <plugin.version.spotbugs>3.1.10</plugin.version.spotbugs>
+    <plugin.version.surefire>2.22.1</plugin.version.surefire>
+
     <!-- Versions -->
     <version.lambda.core>1.2.0</version.lambda.core>
     <version.lambda.events>2.2.4</version.lambda.events>
     <version.log4lambda>1.1.0</version.log4lambda>
     <version.log4j>2.8.2</version.log4j>
+    <version.junit.api>5.3.2</version.junit.api>
+    <version.checkstyle>8.15</version.checkstyle>
   </properties>
 
   <dependencies>
@@ -47,6 +66,20 @@
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
       <version>${version.log4j}</version>
+    </dependency>
+
+    <!-- Testing Dependencies -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${version.junit.api}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${version.junit.api}</version>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>
@@ -101,6 +134,128 @@
             <version>2.8.1</version>
           </dependency>
         </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>${plugin.version.surefire}</version>
+        <configuration>
+          <argLine>@{jacocoArgLine}</argLine>
+          <reuseForks>true</reuseForks>
+          <useSystemClassLoader>false</useSystemClassLoader>
+        </configuration>
+      </plugin>
+
+      <!-- Jacoco Plugin: Ensures minimum test coverage -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${plugin.version.jacoco}</version>
+        <executions>
+          <execution>
+            <id>pre-unit-tests</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+            <configuration>
+              <propertyName>jacocoArgLine</propertyName>
+            </configuration>
+          </execution>
+          <execution>
+            <id>post-unit-test</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>default-jacoco-check</id>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <skip>${skip.jacoco.check}</skip>
+              <rules>
+                <rule>
+                  <element>${rule.element.coverage}</element>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${rule.line.coverage}</minimum>
+                    </limit>
+                    <limit>
+                      <counter>BRANCH</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>${rule.branch.coverage}</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Checkstyle: Ensures similar code structure -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${plugin.version.checkstyle}</version>
+        <dependencies>
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${version.checkstyle}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <failsOnError>true</failsOnError>
+          <failOnViolation>true</failOnViolation>
+          <includeTestResources>false</includeTestResources>
+          <maxAllowedViolations>0</maxAllowedViolations>
+          <violationSeverity>warning</violationSeverity>
+          <logViolationsToConsole>true</logViolationsToConsole>
+          <consoleOutput>true</consoleOutput>
+          <outputDirectory>target/site</outputDirectory>
+          <skip>${skip.checkstyle.check}</skip>
+          <configLocation>checkstyle.xml</configLocation>
+          <linkXRef>false</linkXRef>
+        </configuration>
+        <executions>
+          <execution>
+            <id>check-checkstyle</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- SpotBugs: Ensures well-know bugs never appear -->
+      <plugin>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
+        <version>${plugin.version.spotbugs}</version>
+        <configuration>
+          <effort>Max</effort>
+          <threshold>Low</threshold>
+          <xmlOutput>true</xmlOutput>
+          <xmlOutputDirectory>target/site</xmlOutputDirectory>
+          <outputDirectory>target/site</outputDirectory>
+          <skip>${skip.spotbugs.check}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

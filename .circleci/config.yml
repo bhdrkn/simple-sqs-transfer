@@ -6,6 +6,77 @@ executors:
       - image: circleci/openjdk:8-jdk-browsers
     working_directory: ~/simple-sqs-transfer
 
+references:
+
+  # Key for source files
+  source_key: &source_key
+    key: repo-source-{{ .Revision }}
+
+  # Key for java dependencies
+  m2_key: &m2_key
+    key: m2_dependencies-{{ checksum "pom.xml" }}
+
+  # Stores sources (whole git repository) in a cache to share between jobs
+  persist_source: &persist_source
+    save_cache:
+      <<: *source_key
+      paths:
+        - .circleci
+        - .git
+        - .gitignore
+        - checkstyle.xml
+        - pom.xml
+        - serverless.yml
+        - src
+
+  # Loads sources (whole git repository) from the cache.
+  load_source: &load_source
+    restore_cache:
+      <<: *source_key
+
+  # Stores java dependencies in a cache to share between executions
+  persist_dependencies: &persist_dependencies
+    save_cache:
+      <<: *m2_key
+      paths:
+        - ~/.m2
+
+  # Loads java dependencies from a cache
+  load_dependencie: &load_dependencie
+    restore_cache:
+      <<: *m2_key
+
+  # Install NodeJS to host
+  # TODO: In order to prevent this create a docker image which contains both.
+  install_nodejs: &install_nodejs
+    run:
+      name: Install NodeJs
+      command: |
+        sudo apt-get install -y curl
+        curl -sL https://deb.nodesource.com/setup_11.x > ./setup_node.sh
+        sudo chmod +x ./setup_node.sh
+        sudo ./setup_node.sh
+        sudo apt-get install -y nodejs
+
+  # Installs Serverless CLI
+  install_serverless: &install_serverless
+    run:
+      name: Install ServerlessCLI
+      command: |
+        sudo npm i -g serverless
+
+  # Setups AWS credentials. It depends on job configuration.
+  setup_aws_credentials: &setup_aws_credentials
+    run:
+      name: Setup AWS Credentials
+      command: |
+        mkdir ~/.aws
+        touch ~/.aws/credentials
+        echo "[sqs-transfer-beta]" >> ~/.aws/credentials
+        echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+        echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+
+
 jobs:
   checkout:
     executor: my-executor
@@ -13,45 +84,33 @@ jobs:
     steps:
       - checkout
 
-      - run:
-          command: |
-            ls -al
+      - *persist_source
 
-      - save_cache:
-          key: repo-source-{{ .Revision }}
-          paths:
-            - .circleci
-            - .git
-            - .gitignore
-            - pom.xml
-            - serverless.yml
-            - src
   build:
     executor: my-executor
 
     steps:
-      - restore_cache:
-          keys:
-            - repo-source-{{ .Revision }}
-            - repo-source-
+      - *load_source
 
-      - restore_cache:
-          key: simple-sqs-transfer-{{ checksum "pom.xml" }}
+      - *load_dependencie
 
       - run: mvn dependency:go-offline
 
-      - save_cache:
-          paths:
-            - ~/.m2
-          key: simple-sqs-transfer-{{ checksum "pom.xml" }}
+      - *persist_dependencies
 
-      - run: mvn package
+      - run: mvn package verify
 
       - store_test_results:
           path: target/surefire-reports
 
       - store_artifacts:
           path: target/simple-sqs-transfer-1.0.jar
+
+      - store_artifacts:
+          path: target/checkstyle-result.xml
+  
+      - store_artifacts:
+          path: target/site
 
       - persist_to_workspace:
           root: target
@@ -62,46 +121,16 @@ jobs:
     executor: my-executor
     
     steps:
-      - restore_cache:
-          keys:
-            - repo-source-{{ .Revision }}
-            - repo-source-
+      - *load_source
 
       - attach_workspace:
           at: ./target
 
-      - run:
-          command: |
-            ls -al
-            pwd
-      - run:
-          name: Install NodeJs
-          command: |
-            sudo apt-get install -y curl
-            curl -sL https://deb.nodesource.com/setup_11.x > ./setup_node.sh
-            sudo chmod +x ./setup_node.sh
-            sudo ./setup_node.sh
-            sudo apt-get install -y nodejs
+      - *install_nodejs
 
-      - run: 
-          name: Install ServerlessCLI
-          command: |
-            sudo npm i -g serverless
+      - *install_serverless
 
-      - run:
-          name: Setup AWS Credentials
-          command: |
-            mkdir ~/.aws
-            touch ~/.aws/credentials
-            echo "[sqs-transfer-beta]" >> ~/.aws/credentials
-            echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
-            echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
-
-      - run:
-          name: Show Credentials
-          command: |
-            pwd
-            ls -al ~/.aws/credentials
+      - *setup_aws_credentials
 
       - run:
           name: Deploy Application
