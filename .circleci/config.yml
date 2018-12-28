@@ -1,0 +1,122 @@
+version: 2.1
+
+executors:
+  my-executor:
+    docker:
+      - image: circleci/openjdk:8-jdk-browsers
+    working_directory: ~/simple-sqs-transfer
+
+jobs:
+  checkout:
+    executor: my-executor
+
+    steps:
+      - checkout
+
+      - run:
+          command: |
+            ls -al
+
+      - save_cache:
+          key: repo-source-{{ .Revision }}
+          paths:
+            - .circleci
+            - .git
+            - .gitignore
+            - pom.xml
+            - serverless.yml
+            - src
+  build:
+    executor: my-executor
+
+    steps:
+      - restore_cache:
+          keys:
+            - repo-source-{{ .Revision }}
+            - repo-source-
+
+      - restore_cache:
+          key: simple-sqs-transfer-{{ checksum "pom.xml" }}
+
+      - run: mvn dependency:go-offline
+
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: simple-sqs-transfer-{{ checksum "pom.xml" }}
+
+      - run: mvn package
+
+      - store_test_results:
+          path: target/surefire-reports
+
+      - store_artifacts:
+          path: target/simple-sqs-transfer-1.0.jar
+
+      - persist_to_workspace:
+          root: target
+          paths: 
+            - simple-sqs-transfer-1.0.jar
+
+  deploy:
+    executor: my-executor
+    
+    steps:
+      - restore_cache:
+          keys:
+            - repo-source-{{ .Revision }}
+            - repo-source-
+
+      - attach_workspace:
+          at: ./target
+
+      - run:
+          command: |
+            ls -al
+            pwd
+      - run:
+          name: Install NodeJs
+          command: |
+            sudo apt-get install -y curl
+            curl -sL https://deb.nodesource.com/setup_11.x > ./setup_node.sh
+            sudo chmod +x ./setup_node.sh
+            sudo ./setup_node.sh
+            sudo apt-get install -y nodejs
+
+      - run: 
+          name: Install ServerlessCLI
+          command: |
+            sudo npm i -g serverless
+
+      - run:
+          name: Setup AWS Credentials
+          command: |
+            mkdir ~/.aws
+            touch ~/.aws/credentials
+            echo "[sqs-transfer-beta]" >> ~/.aws/credentials
+            echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+            echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+
+      - run:
+          name: Show Credentials
+          command: |
+            pwd
+            ls -al ~/.aws/credentials
+
+      - run:
+          name: Deploy Application
+          command: |
+            serverless deploy -v --stage beta
+workflows:
+  version: 2.1
+
+  cid:
+    jobs:
+      - checkout
+      - build:
+          requires:
+            - checkout
+      - deploy:
+          requires:
+            - build
+
