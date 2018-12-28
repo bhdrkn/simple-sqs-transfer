@@ -20,6 +20,22 @@ service: simple-sqs-transfer # NOTE: update this with your service name
 provider:
   name: aws
   runtime: java8
+  stage: ${opt:stage, self:custom.defaultStage}
+  profile: ${self:custom.configurations.${self:provider.stage}.profile}
+  region: ${self:custom.configurations.${self:provider.stage}.region}
+
+custom:
+  defaultStage: dev
+  configurations:
+    dev:
+      profile: serverless-cli
+      region: eu-west-2
+    beta:
+      profile: sqs-transfer-beta
+      region: us-west-2
+    prod:
+      profile: sqs-transfer-prod
+      region: us-east-1
 
 # you can overwrite defaults here
 #  stage: dev
