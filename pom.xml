@@ -1,49 +1,54 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.serverless</groupId>
-  <artifactId>hello</artifactId>
+  <groupId>com.bahadirakin</groupId>
+  <artifactId>simple-sqs-transfer</artifactId>
   <packaging>jar</packaging>
-  <version>dev</version>
-  <name>hello</name>
+  <version>1.0</version>
+  <name>simple-sqs-transfer</name>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Versions -->
+    <version.lambda.core>1.2.0</version.lambda.core>
+    <version.lambda.events>2.2.4</version.lambda.events>
+    <version.log4lambda>1.1.0</version.log4lambda>
+    <version.log4j>2.8.2</version.log4j>
   </properties>
 
   <dependencies>
+    <!-- Lambda Dependencies -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-lambda-java-core</artifactId>
+      <version>${version.lambda.core}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-lambda-java-events</artifactId>
+      <version>${version.lambda.events}</version>
+    </dependency>    
+    
+    <!-- Logging Dependencies -->
     <dependency>
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-lambda-java-log4j2</artifactId>
-      <version>1.1.0</version>
+      <version>${version.log4lambda}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>2.8.2</version>
+      <version>${version.log4j}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
-      <version>2.8.2</version>
+      <version>${version.log4j}</version>
     </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>2.8.5</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.8.5</version>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-annotations</artifactId>
-      <version>2.8.5</version>
-    </dependency>
+
   </dependencies>
 
   <build>
@@ -72,6 +77,15 @@
             </goals>
             <configuration>
 	      <minimizeJar>true</minimizeJar>
+	      <!-- Including artifacts that are loaded manually/using reflections. -->
+	      <filters>
+                <filter>
+                  <artifact>joda-time:joda-time</artifact>
+                  <includes>
+                    <include>org/joda/time/**</include>
+                  </includes>
+                </filter>
+              </filters>
               <transformers>
                 <transformer
                   implementation="com.github.edwgiz.mavenShadePlugin.log4j2CacheTransformer.PluginsCacheFileTransformer">
