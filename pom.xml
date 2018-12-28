@@ -71,6 +71,7 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+	      <minimizeJar>true</minimizeJar>
               <transformers>
                 <transformer
                   implementation="com.github.edwgiz.mavenShadePlugin.log4j2CacheTransformer.PluginsCacheFileTransformer">
