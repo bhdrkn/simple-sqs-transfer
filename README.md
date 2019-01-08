@@ -1,0 +1,1 @@
+[![CircleCI](https://circleci.com/gh/bhdrkn/simple-sqs-transfer.svg?style=svg)](https://circleci.com/gh/bhdrkn/simple-sqs-transfer)

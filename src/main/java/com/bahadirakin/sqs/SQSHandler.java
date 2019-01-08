@@ -3,16 +3,27 @@ package com.bahadirakin.sqs;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
+import com.bahadirakin.sqs.operation.DaggerOperationFactory;
+import com.bahadirakin.sqs.operation.OperationFactory;
+import com.bahadirakin.sqs.operation.TransferOperation;
 
 /**
  * SQS Handler for source queue.
  */
 public class SQSHandler implements RequestHandler<SQSEvent, Void> {
 
+    private final OperationFactory operationFactory;
+
+    public SQSHandler() {
+        this(DaggerOperationFactory.create());
+    }
+
+    SQSHandler(OperationFactory operationFactory) {
+        this.operationFactory = operationFactory;
+    }
+
     @Override
     public Void handleRequest(SQSEvent event, Context context) {
-
-        System.out.println(event);
 
         if (event == null) {
             System.out.println("Event is null!");
@@ -24,10 +35,11 @@ public class SQSHandler implements RequestHandler<SQSEvent, Void> {
             return null;
         }
 
+        TransferOperation transferOperation = operationFactory.createTransferOperation();
         for (SQSEvent.SQSMessage msg : event.getRecords()) {
-
-            System.out.println("Message Received: " + msg.getMessageId());
+            transferOperation.transfer(msg);
         }
+
         return null;
     }
 }

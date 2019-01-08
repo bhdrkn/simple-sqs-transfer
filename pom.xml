@@ -28,13 +28,17 @@
     <plugin.version.checkstyle>3.0.0</plugin.version.checkstyle>
     <plugin.version.spotbugs>3.1.10</plugin.version.spotbugs>
     <plugin.version.surefire>2.22.1</plugin.version.surefire>
+    <plugin.version.compiler>3.8.0</plugin.version.compiler>
 
     <!-- Versions -->
     <version.lambda.core>1.2.0</version.lambda.core>
     <version.lambda.events>2.2.4</version.lambda.events>
+    <version.dagger>2.20</version.dagger>
+    <version.aws.sqs>1.11.475</version.aws.sqs>
     <version.log4lambda>1.1.0</version.log4lambda>
     <version.log4j>2.8.2</version.log4j>
     <version.junit.api>5.3.2</version.junit.api>
+    <version.mockito>2.23.4</version.mockito>
     <version.checkstyle>8.15</version.checkstyle>
   </properties>
 
@@ -49,8 +53,22 @@
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-lambda-java-events</artifactId>
       <version>${version.lambda.events}</version>
-    </dependency>    
-    
+    </dependency>
+
+    <!-- DI dependencies -->
+    <dependency>
+      <groupId>com.google.dagger</groupId>
+      <artifactId>dagger</artifactId>
+      <version>${version.dagger}</version>
+    </dependency>
+
+    <!-- SQS Dependency -->
+    <dependency>
+      <groupId>com.amazonaws</groupId>
+      <artifactId>aws-java-sdk-sqs</artifactId>
+      <version>1.11.475</version>
+    </dependency>
+
     <!-- Logging Dependencies -->
     <dependency>
       <groupId>com.amazonaws</groupId>
@@ -81,24 +99,42 @@
       <version>${version.junit.api}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>${version.mockito}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-junit-jupiter</artifactId>
+      <version>${version.mockito}</version>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 
   <build>
     <plugins>
-      <!--
-        Using the Apache Maven Shade plugin to package the jar
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${plugin.version.compiler}</version>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.dagger</groupId>
+              <artifactId>dagger-compiler</artifactId>
+              <version>${version.dagger}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
 
-        "This plugin provides the capability to package the artifact
-        in an uber-jar, including its dependencies and to shade - i.e. rename -
-        the packages of some of the dependencies."
-
-        Link: https://maven.apache.org/plugins/maven-shade-plugin/
-      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-        <version>2.3</version>
+        <version>3.2.1</version>
         <configuration>
           <createDependencyReducedPom>false</createDependencyReducedPom>
         </configuration>
@@ -109,16 +145,6 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-	      <minimizeJar>true</minimizeJar>
-	      <!-- Including artifacts that are loaded manually/using reflections. -->
-	      <filters>
-                <filter>
-                  <artifact>joda-time:joda-time</artifact>
-                  <includes>
-                    <include>org/joda/time/**</include>
-                  </includes>
-                </filter>
-              </filters>
               <transformers>
                 <transformer
                   implementation="com.github.edwgiz.mavenShadePlugin.log4j2CacheTransformer.PluginsCacheFileTransformer">
@@ -223,6 +249,9 @@
           <skip>${skip.checkstyle.check}</skip>
           <configLocation>checkstyle.xml</configLocation>
           <linkXRef>false</linkXRef>
+          <sourceDirectories>
+            <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+          </sourceDirectories>
         </configuration>
         <executions>
           <execution>

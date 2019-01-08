@@ -23,6 +23,12 @@ provider:
   stage: ${opt:stage, self:custom.defaultStage}
   profile: ${self:custom.configurations.${self:provider.stage}.profile}
   region: ${self:custom.configurations.${self:provider.stage}.region}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        - { "Fn::GetAtt": ["DestinationQueue", "Arn" ] }
 
 custom:
   defaultStage: dev
@@ -57,9 +63,10 @@ functions:
           batchSize: 1
           enabled: true
     environment:
-      destinationQueue:
-        Fn::GetAtt: [DestinationQueue, Arn]
-    memorySize: 128
+      destinationQueueUrl:
+        Ref: DestinationQueue
+    memorySize: 256
+    timeout: 25
 
 resources:
   Resources:
